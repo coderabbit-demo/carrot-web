@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# CodeRabbit YAML Configuration Documentation: https://docs.coderabbit.ai/reference/configuration
+
+tone_instructions: |
+  - Serious, clear, precise language only.
+  - Indicate if the code is in the path that would cause a production outage or not.
+
+enable_free_tier: false
+
+reviews:
+  # UX Settings
+  profile: chill
+  sequence_diagrams: true
+  changed_files_summary: true
+  collapse_walkthrough: true
+  estimate_code_review_effort: false
+  auto_title_placeholder: "[cr]"
+  auto_title_instructions: "Follow: https://www.conventionalcommits.org/en/v1.0.0/"
+  high_level_summary_in_walkthrough: true
+  in_progress_fortune: false
+  review_details: false
+  poem: false
+
+  # CI/CD UX Settings
+  review_status: true
+  commit_status: false
+
+  # Issue Tracking
+  assess_linked_issues: false
+  related_issues: false
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        - Ignore minor or stylistic concerns.
+        - Restrict feedback to errors, security risks, or functionality-breaking problems.
+        - Do not post comments on code style, formatting, or non-critical improvements.
+        - When in doubt, err on the side of fewer comments: brevity and blocking issues only.
+        - Avoid posting any refactoring suggestions.
+    - path: "src/lib/api/**"
+      instructions: |
+        Types and calls must mirror the gateway public API: snake_case fields, money as {amount_minor, currency}.
+        Flag any place that stores session or bearer tokens in browser storage, sends a state-changing request without the CSRF header, or creates an order without an Idempotency-Key.
+    - path: "src/lib/money.ts"
+      instructions: |
+        Money must stay in integer minor units. Flag floating-point money arithmetic.
+    - path: "src/features/cart/**"
+      instructions: |
+        Server prices and totals are authoritative; client-computed totals are a preview only.
+        Flag checkout paths that can submit twice, regenerate the Idempotency-Key during a retry, or ignore 402, 409 insufficient_stock, 409 idempotency_conflict or 202 payment_pending responses.
+    - path: "src/features/**/*.tsx"
+      instructions: |
+        Flag admin-only actions (cancel order, check payment status) shown to non-admin roles, and any internal or simulation control exposed to customers.
+
+  # Review all branches
+  auto_review:
+    base_branches:
+      - .*
+
+  finishing_touches:
+    autofix:
+      enabled: false
+
+  pre_merge_checks:
+    # Standard Pre-merge Checks
+    title:
+      mode: warning
+    description:
+      mode: warning
+    issue_assessment:
+      mode: "off"
+    docstrings:
+      mode: warning
+
+chat:
+  art: false
+  auto_reply: false
+
+knowledge_base:
+  automatic_linking_mode: enabled # Automatically detect related repositories to flag breaking changes & downstream impact
+  linked_repositories:
+  - repository: "coderabbit-demo/carrot-gateway"
+    instructions: "Public API consumed by the storefront; owns session cookies, CSRF and organization selection. Check that DTO shapes, status codes and error codes used here match the gateway OpenAPI."
