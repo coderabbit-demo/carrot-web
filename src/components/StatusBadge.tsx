@@ -1,6 +1,6 @@
 import type { OrderStatus } from '../lib/api/types';
 
-const LABELS: Record<OrderStatus, string> = {
+export const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending',
   payment_pending: 'Confirming payment',
   confirmed: 'Confirmed',
@@ -10,5 +10,5 @@ const LABELS: Record<OrderStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: OrderStatus }) {
-  return <span className={`badge badge-${status}`}>{LABELS[status] ?? status}</span>;
+  return <span className={`badge badge-${status}`}>{STATUS_LABELS[status] ?? status}</span>;
 }
