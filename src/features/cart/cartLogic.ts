@@ -32,6 +32,11 @@ export function parseQuantityInput(raw: string): ParsedQuantity {
   return error ? { ok: false, error } : { ok: true, value };
 }
 
+/** True when any quantity input text would be rejected by parseQuantityInput. */
+export function hasInvalidDraft(drafts: string[]): boolean {
+  return drafts.some((draft) => !parseQuantityInput(draft).ok);
+}
+
 export function addLine(
   lines: CartLine[],
   line: CartLine,
