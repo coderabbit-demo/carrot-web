@@ -1,0 +1,143 @@
+.overview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.overview-head h1 {
+  margin-bottom: 0.15rem;
+}
+
+.overview-head p {
+  margin: 0;
+}
+
+.overview-section {
+  margin-top: 1.75rem;
+}
+
+.overview-section > h2 {
+  margin-top: 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.overview-subhead {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.overview-coverage {
+  margin: 0.5rem 0;
+}
+
+/* Cards */
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.overview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.overview-card dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.overview-card dd {
+  margin: 0;
+}
+
+.overview-figure {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.overview-values {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.overview-values li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+}
+
+.overview-caption {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Needs attention */
+.attention-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.attention-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.9rem;
+}
+
+.attention-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  font-weight: 600;
+}
+
+.attention-hint {
+  margin: 0.25rem 0 0;
+}
+
+.attention-meta {
+  margin: 0.15rem 0 0;
+}
+
+.overview-clear {
+  margin: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+@media (max-width: 560px) {
+  .overview-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-figure {
+    font-size: 1.35rem;
+  }
+}

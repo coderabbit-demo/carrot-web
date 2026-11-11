@@ -6,6 +6,7 @@ import { SignInPage } from '../features/auth/SignInPage';
 import { CartPage } from '../features/cart/CartPage';
 import { CatalogPage } from '../features/catalog/CatalogPage';
 import { InvoicesPage } from '../features/invoices/InvoicesPage';
+import { OrganizationPage } from '../features/organization/OrganizationPage';
 import { OrderDetailPage } from '../features/orders/OrderDetailPage';
 import { OrdersPage } from '../features/orders/OrdersPage';
 import { Layout } from './Layout';
@@ -25,6 +26,7 @@ export function AppRoutes() {
           <Route path="/orders/:orderId" element={<OrderDetailPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/organization" element={<OrganizationPage />} />
           <Route
             path="*"
             element={
