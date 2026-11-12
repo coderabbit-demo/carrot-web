@@ -7,6 +7,7 @@ import type { Product } from '../../lib/api/types';
 import { useCart } from '../cart/CartProvider';
 import { parseQuantityInput } from '../cart/cartLogic';
 import { AVAILABILITY_LABELS, availabilityOf } from './availability';
+import { checkCartAvailability } from './cartAvailability';
 
 export function ProductCard({ product }: { product: Product }) {
   const cart = useCart();
@@ -24,8 +25,10 @@ export function ProductCard({ product }: { product: Product }) {
       setError(parsed.error);
       return;
     }
-    if (parsed.value > product.available_kg) {
-      setError(`Only ${formatKg(product.available_kg)} available.`);
+    const inCartKg = cart.lines.find((l) => l.product_id === product.id)?.quantity_kg ?? 0;
+    const stockError = checkCartAvailability(product.available_kg, inCartKg, parsed.value);
+    if (stockError) {
+      setError(stockError);
       return;
     }
     const cartError = cart.add(product, parsed.value);
