@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { returnToFromState } from '../../app/returnTo';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { Spinner } from '../../components/Spinner';
@@ -26,7 +27,7 @@ export function validateSignIn(email: string, password: string): FieldErrors {
 export function SignInPage() {
   const auth = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/catalog';
+  const from = returnToFromState(location.state);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +37,9 @@ export function SignInPage() {
 
   if (auth.status === 'loading') return <Spinner />;
   if (auth.status === 'ready') return <Navigate to={from} replace />;
-  if (auth.status === 'needs_org') return <Navigate to="/select-organization" replace />;
+  if (auth.status === 'needs_org') {
+    return <Navigate to="/select-organization" replace state={{ from }} />;
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
