@@ -54,6 +54,10 @@ export function decodeErrorBody(
       requestId: request_id ?? requestIdHeader ?? undefined,
     });
   }
+  return unexpectedResponse(status, requestIdHeader);
+}
+
+function unexpectedResponse(status: number, requestIdHeader: string | null): ApiError {
   return new ApiError({
     code: 'unexpected_response',
     message: `Unexpected response from the server (HTTP ${status}).`,
@@ -67,9 +71,14 @@ export function asApiError(error: unknown): ApiError {
   return new ApiError({ code: 'unknown_error', message: 'Something went wrong.', status: 0 });
 }
 
-/** True for transport failures and server-side errors, where trying again may help. */
+/**
+ * True for transport failures and server-side errors, where trying again may help.
+ * An unreadable 2xx/3xx body counts too: the request was handled, so a replay with the
+ * same Idempotency-Key is the safe way to find out the outcome.
+ */
 export function isRetryable(error: ApiError): boolean {
-  return error.status === 0 || error.status >= 500;
+  if (error.status === 0 || error.status >= 500) return true;
+  return error.code === 'unexpected_response' && error.status >= 200 && error.status < 400;
 }
 
 /** Text safe to show a user. */
@@ -171,8 +180,18 @@ export async function request<T>(
     const res = await attempt(method, path, options);
 
     if (res.ok) {
-      if (res.status === 204) return { status: 204, data: undefined as T, headers: res.headers };
-      const data = options.responseType === 'blob' ? await res.blob() : await res.json();
+      if (res.status === 204 || res.status === 205) {
+        return { status: res.status, data: undefined as T, headers: res.headers };
+      }
+      if (options.responseType === 'blob') {
+        return { status: res.status, data: (await res.blob()) as T, headers: res.headers };
+      }
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        throw unexpectedResponse(res.status, res.headers.get('X-Carrot-Request-Id'));
+      }
       return { status: res.status, data: data as T, headers: res.headers };
     }
 
