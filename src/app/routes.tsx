@@ -8,6 +8,7 @@ import { CatalogPage } from '../features/catalog/CatalogPage';
 import { InvoicesPage } from '../features/invoices/InvoicesPage';
 import { OrderDetailPage } from '../features/orders/OrderDetailPage';
 import { OrdersPage } from '../features/orders/OrdersPage';
+import { SharePage } from '../features/share/SharePage';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -16,6 +17,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/select-organization" element={<SelectOrganizationPage />} />
+      <Route path="/share" element={<SharePage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/catalog" replace />} />
