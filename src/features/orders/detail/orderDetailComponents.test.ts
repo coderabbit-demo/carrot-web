@@ -137,3 +137,43 @@ describe('OrderActions', () => {
     expect(html).toContain('disabled');
   });
 });
+
+
+describe('receipt table boundary cases', () => {
+  it('retains the server total when it differs from the sum of line totals', () => {
+    const html = render(createElement(OrderLinesTable, {
+      order: { ...baseOrder, total: usd(12345) },
+    }));
+    const footer = html.match(/<tfoot>(.*?)<\/tfoot>/)?.[1];
+    expect(footer).toContain('Total');
+    expect(footer).toContain('$123.45');
+    expect(footer).not.toContain('$273.00');
+    expect(html).toContain('$210.00');
+    expect(html).toContain('$63.00');
+  });
+
+  it('renders an empty order with a zero total and summary', () => {
+    const html = render(createElement(OrderLinesTable, {
+      order: { ...baseOrder, lines: [], total: usd(0) },
+    }));
+    expect(html).toContain('<tbody></tbody>');
+    expect(html).toContain('$0.00');
+    expect(html).toContain('0 products · 0 kg');
+  });
+
+  it('preserves fractional kilograms and uses a singular product summary', () => {
+    const html = render(createElement(OrderLinesTable, {
+      order: { ...baseOrder, lines: [{ ...baseOrder.lines[0], quantity_kg: 0.125 }] },
+    }));
+    expect(html).toContain('1 product · 0.125 kg');
+    expect(html).toContain('<td class="num">0.125 kg</td>');
+  });
+
+  it('escapes the order number in the receipt caption', () => {
+    const html = render(createElement(OrderLinesTable, {
+      order: { ...baseOrder, number: 'ORD-<script>bad</script>' },
+    }));
+    expect(html).toContain('Products in order ORD-&lt;script&gt;bad&lt;/script&gt;');
+    expect(html).not.toContain('<script>');
+  });
+});
