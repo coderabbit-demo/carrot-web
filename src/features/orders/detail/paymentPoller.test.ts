@@ -418,3 +418,131 @@ describe('createPoller manual checks', () => {
     expect(manual).not.toHaveBeenCalled();
   });
 });
+
+
+describe('createPoller regression boundaries', () => {
+  it.each<OrderStatus>(['pending', 'confirmed', 'payment_failed', 'review_required', 'cancelled'])(
+    'stops automatic checks on %s',
+    async (status) => {
+      const value = order(status);
+      const fetch = vi.fn<() => Promise<Order>>().mockResolvedValue(value);
+      const { poller, onResult } = setup(fetch);
+      poller.start();
+      await advance(3000);
+      expect(onResult).toHaveBeenCalledTimes(1);
+      expect(onResult).toHaveBeenCalledWith(value);
+      expect(poller.snapshot()).toEqual({ state: 'stopped', attempts: 1, inFlight: false });
+      await advance(200000);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('counts repeated network failures against the automatic attempt budget', async () => {
+    const fetch = vi.fn<() => Promise<Order>>().mockRejectedValue(new Error('offline'));
+    const { poller, onResult } = setup(fetch, { delays: [10], maxAttempts: 2 });
+    poller.start();
+    await advance(20);
+    expect(poller.snapshot()).toEqual({ state: 'exhausted', attempts: 2, inFlight: false });
+    expect(onResult).not.toHaveBeenCalled();
+    await advance(1000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits the full next delay after a slow request completes', async () => {
+    const pending = deferred<Order>();
+    const fetch = vi.fn<() => Promise<Order>>().mockReturnValueOnce(pending.promise)
+      .mockResolvedValue(order('payment_pending'));
+    const { poller } = setup(fetch);
+    poller.start();
+    await advance(3000);
+    await advance(100000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(poller.snapshot().attempts).toBe(1);
+    pending.resolve(order('payment_pending'));
+    await advance(0);
+    await advance(5999);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await advance(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    poller.stop();
+  });
+
+  it('rejects a second manual check without interrupting the first', async () => {
+    const pending = deferred<Order>();
+    const fetch = vi.fn<() => Promise<Order>>().mockResolvedValue(order('payment_pending'));
+    const { poller, onResult } = setup(fetch);
+    poller.start();
+    const first = poller.manualCheck(() => pending.promise);
+    const second = vi.fn<() => Promise<Order>>();
+    await expect(poller.manualCheck(second)).resolves.toEqual({ kind: 'busy' });
+    expect(second).not.toHaveBeenCalled();
+    pending.resolve(order('confirmed'));
+    await expect(first).resolves.toEqual({ kind: 'ok', value: order('confirmed') });
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledWith(order('confirmed'));
+    await advance(200000);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('drops a rejected manual check after stop without restarting timers', async () => {
+    const pending = deferred<Order>();
+    const fetch = vi.fn<() => Promise<Order>>();
+    const { poller, onResult } = setup(fetch);
+    poller.start();
+    const manual = poller.manualCheck(() => pending.promise);
+    poller.stop();
+    pending.reject(new Error('late failure'));
+    await expect(manual).resolves.toEqual({ kind: 'stale' });
+    expect(poller.snapshot()).toEqual({ state: 'stopped', attempts: 0, inFlight: false });
+    expect(onResult).not.toHaveBeenCalled();
+    await advance(200000);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('allows a manual check while paused without resuming automatic checks', async () => {
+    const fetch = vi.fn<() => Promise<Order>>().mockResolvedValue(order('payment_pending'));
+    const { poller, onResult } = setup(fetch);
+    poller.start();
+    poller.pause();
+    await expect(poller.manualCheck(async () => order('payment_pending'))).resolves.toEqual({
+      kind: 'ok', value: order('payment_pending'),
+    });
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(poller.snapshot().state).toBe('paused');
+    await advance(200000);
+    expect(fetch).not.toHaveBeenCalled();
+    poller.resume();
+    await advance(2999);
+    expect(fetch).not.toHaveBeenCalled();
+    await advance(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    poller.stop();
+  });
+
+  it('recovers from a synchronously throwing manual fetcher', async () => {
+    const failure = new Error('synchronous failure');
+    const fetch = vi.fn<() => Promise<Order>>().mockResolvedValue(order('payment_pending'));
+    const { poller } = setup(fetch);
+    poller.start();
+    await expect(poller.manualCheck(() => { throw failure; })).resolves.toEqual({
+      kind: 'error', error: failure,
+    });
+    expect(poller.snapshot()).toEqual({ state: 'waiting', attempts: 0, inFlight: false });
+    await advance(3000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    poller.stop();
+  });
+
+  it.each([{ delays: [], maxAttempts: 3 }, { delays: [10], maxAttempts: 0 }])(
+    'sends no automatic requests with an empty schedule or budget: %o',
+    async (options) => {
+      const fetch = vi.fn<() => Promise<Order>>();
+      const { poller } = setup(fetch, options);
+      poller.start();
+      expect(poller.snapshot()).toEqual({ state: 'exhausted', attempts: 0, inFlight: false });
+      await advance(1000);
+      expect(fetch).not.toHaveBeenCalled();
+      poller.stop();
+    },
+  );
+});
