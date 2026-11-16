@@ -10,7 +10,7 @@ import { describeCheckoutError } from '../cart/checkoutError';
 import type { StockShortage } from '../../lib/api/types';
 import './checkout.css';
 import { CHECKOUT_STEPS } from './checkoutWizard.types';
-import type { CheckoutStepId } from './checkoutWizard.types';
+import type { CheckoutStepId, DeliveryDetails } from './checkoutWizard.types';
 import { useCheckoutWizard } from './useCheckoutWizard';
 import { ReviewCartStep } from './steps/ReviewCartStep';
 import { DeliveryDetailsStep } from './steps/DeliveryDetailsStep';
@@ -23,6 +23,12 @@ const STEP_LABELS: Record<CheckoutStepId, string> = {
   confirm: 'Confirm',
   success: 'Success',
 };
+
+// The delivery details are part of what's being submitted, so a change to either one counts as
+// a different checkout attempt for idempotency purposes, same as a change to the cart lines.
+function checkoutSignature(lines: Parameters<typeof cartSignature>[0], delivery: DeliveryDetails): string {
+  return `${cartSignature(lines)}|${delivery.purchaseOrderReference.trim()}|${delivery.notes.trim()}`;
+}
 
 /**
  * The four-step guided checkout: review the cart, add optional delivery details, confirm and
@@ -47,7 +53,7 @@ export function CheckoutWizard() {
     inFlight.current = true;
     wizard.startSubmit();
 
-    const key = checkoutKey.current.get(cartSignature(wizard.cartLines));
+    const key = checkoutKey.current.get(checkoutSignature(wizard.cartLines, wizard.state.delivery));
     try {
       const order = await createOrder(
         {
