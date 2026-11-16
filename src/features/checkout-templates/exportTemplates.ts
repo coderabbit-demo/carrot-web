@@ -1,0 +1,16 @@
+import { saveAs } from 'file-saver';
+import type { Database } from 'sql.js';
+import { listTemplates } from './db/templateQueries';
+
+/**
+ * Exports every saved template for an organization to a JSON file and triggers a browser
+ * download. Used by the picker's "Export" action so a buyer can back up or move their
+ * standing-order templates.
+ */
+export function exportTemplates(db: Database, organizationId: string): void {
+  const templates = listTemplates(db, organizationId);
+  const payload = JSON.stringify({ exported_at: new Date().toISOString(), templates }, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
+  const stamp = new Date().toISOString().slice(0, 10);
+  saveAs(blob, `carrot-checkout-templates-${stamp}.json`);
+}
