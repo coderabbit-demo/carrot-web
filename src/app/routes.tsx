@@ -5,6 +5,7 @@ import { SelectOrganizationPage } from '../features/auth/SelectOrganizationPage'
 import { SignInPage } from '../features/auth/SignInPage';
 import { CartPage } from '../features/cart/CartPage';
 import { CatalogPage } from '../features/catalog/CatalogPage';
+import { CheckoutWizard } from '../features/checkout/CheckoutWizard';
 import { InvoicesPage } from '../features/invoices/InvoicesPage';
 import { OrderDetailPage } from '../features/orders/OrderDetailPage';
 import { OrdersPage } from '../features/orders/OrdersPage';
@@ -23,6 +24,7 @@ export function AppRoutes() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+          <Route path="/checkout" element={<CheckoutWizard />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route
