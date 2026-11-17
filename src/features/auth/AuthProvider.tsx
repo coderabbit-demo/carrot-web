@@ -23,6 +23,7 @@ interface AuthContextValue extends AuthState {
 // Only the selected organization id is remembered across reloads. The session itself is an
 // HttpOnly cookie managed by the gateway; no tokens are kept in browser storage.
 const ORG_KEY = 'carrot.organization';
+const LAST_USER_KEY = 'carrot_last_user';
 
 function readStoredOrg(): string | null {
   try {
@@ -38,6 +39,15 @@ function writeStoredOrg(id: string | null): void {
     else localStorage.removeItem(ORG_KEY);
   } catch {
     // Storage unavailable: the app still works, the choice is just not remembered.
+  }
+}
+
+// Lets the sign-in page greet a returning user by name before they sign in again.
+function writeLastUser(user: User): void {
+  try {
+    localStorage.setItem(LAST_USER_KEY, JSON.stringify({ name: user.name, email: user.email }));
+  } catch {
+    // Storage unavailable: the greeting just won't show next time.
   }
 }
 
@@ -70,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getMe().then(
       (me) => {
         if (cancelled) return;
+        writeLastUser(me.user);
         setState({
           status: 'ready',
           user: me.user,
@@ -97,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOrganizationId(res.organization.id);
       writeStoredOrg(res.organization.id);
     }
+    writeLastUser(res.user);
     setState({
       status: res.organization ? 'ready' : 'needs_org',
       user: res.user,

@@ -9,10 +9,16 @@ import type { ApiError } from '../../lib/api/client';
 import { useAuth } from './AuthProvider';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LAST_USER_KEY = 'carrot_last_user';
 
 interface FieldErrors {
   email?: string;
   password?: string;
+}
+
+interface LastUser {
+  name: string;
+  email: string;
 }
 
 export function validateSignIn(email: string, password: string): FieldErrors {
@@ -21,6 +27,29 @@ export function validateSignIn(email: string, password: string): FieldErrors {
   else if (!EMAIL_PATTERN.test(email.trim())) errors.email = 'Enter a valid email address.';
   if (!password) errors.password = 'Enter your password.';
   return errors;
+}
+
+/** Reads the greeting left by the last successful sign-in; absent or malformed is just "no greeting". */
+export function readLastUser(): LastUser | null {
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const { name, email } = parsed as Record<string, unknown>;
+    if (typeof name !== 'string' || typeof email !== 'string') return null;
+    return { name, email };
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastUser(): void {
+  try {
+    localStorage.removeItem(LAST_USER_KEY);
+  } catch {
+    // Storage unavailable: nothing to clear.
+  }
 }
 
 export function SignInPage() {
@@ -33,6 +62,7 @@ export function SignInPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [lastUser, setLastUser] = useState<LastUser | null>(() => readLastUser());
 
   if (auth.status === 'loading') return <Spinner />;
   if (auth.status === 'ready') return <Navigate to={from} replace />;
@@ -59,7 +89,31 @@ export function SignInPage() {
     <main className="auth-page">
       <form className="card auth-card" onSubmit={onSubmit} noValidate>
         <h1>Carrot Cart</h1>
-        <p className="muted">Sign in to order wholesale carrots.</p>
+        {lastUser ? (
+          <p className="muted">
+            Welcome back, {lastUser.name} — sign in to continue.{' '}
+            <button
+              type="button"
+              onClick={() => {
+                clearLastUser();
+                setLastUser(null);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                font: 'inherit',
+                color: 'inherit',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+              }}
+            >
+              not you? clear
+            </button>
+          </p>
+        ) : (
+          <p className="muted">Sign in to order wholesale carrots.</p>
+        )}
 
         {auth.sessionExpired && (
           <div className="banner banner-warning" role="status">
