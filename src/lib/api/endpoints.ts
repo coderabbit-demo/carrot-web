@@ -41,10 +41,15 @@ export async function listProducts(): Promise<Product[]> {
  * 201/200 return a final order, 202 returns an order still in `payment_pending`.
  * All three resolve with the Order; errors (402, 409, 5xx, ...) reject with ApiError.
  */
-export async function createOrder(body: CreateOrderRequest, idempotencyKey: string): Promise<Order> {
+export async function createOrder(
+  body: CreateOrderRequest,
+  idempotencyKey: string,
+  signal?: AbortSignal,
+): Promise<Order> {
   const res = await request<Order>('POST', '/orders', {
     body,
     headers: { 'Idempotency-Key': idempotencyKey },
+    signal,
   });
   return res.data;
 }
