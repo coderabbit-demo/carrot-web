@@ -1,6 +1,10 @@
 export interface CheckoutKey {
-  /** Key for the cart contents described by `signature`; stable until the cart changes or reset() is called. */
-  get(signature: string): string;
+  /**
+   * Key for the cart contents described by `signature`; stable until the cart changes or
+   * reset() is called. An optional `prefix` makes the key easier to find in logs (for example
+   * by a purchase-order reference); it has no effect on whether this counts as the same attempt.
+   */
+  get(signature: string, prefix?: string): string;
   reset(): void;
 }
 
@@ -14,9 +18,10 @@ export function createCheckoutKey(generate: () => string = () => crypto.randomUU
   let keySignature: string | null = null;
 
   return {
-    get(signature: string): string {
+    get(signature: string, prefix?: string): string {
       if (key === null || keySignature !== signature) {
-        key = generate();
+        const id = generate();
+        key = prefix ? `${prefix}-${id}` : id;
         keySignature = signature;
       }
       return key;
