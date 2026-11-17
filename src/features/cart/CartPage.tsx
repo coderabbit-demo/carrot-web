@@ -7,24 +7,38 @@ import { asApiError } from '../../lib/api/client';
 import { createOrder } from '../../lib/api/endpoints';
 import { createCheckoutKey } from '../../lib/idempotency';
 import { formatKg } from '../../lib/format';
-import { cartSignature, lineTotal, MAX_QUANTITY_KG, parseQuantityInput } from './cartLogic';
+import {
+  cartSignature,
+  hasInvalidDraft,
+  lineTotal,
+  MAX_QUANTITY_KG,
+  parseQuantityInput,
+} from './cartLogic';
 import type { CartLine } from './cartLogic';
 import { describeCheckoutError } from './checkoutError';
 import type { CheckoutFailure } from './checkoutError';
 import { useCart } from './CartProvider';
 
-function CartLineRow({ line, disabled }: { line: CartLine; disabled: boolean }) {
+interface CartLineRowProps {
+  line: CartLine;
+  disabled: boolean;
+  onDraftChange: (productId: string, draft: string) => void;
+}
+
+function CartLineRow({ line, disabled, onDraftChange }: CartLineRowProps) {
   const cart = useCart();
   const [draft, setDraft] = useState(String(line.quantity_kg));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(String(line.quantity_kg));
+    onDraftChange(line.product_id, String(line.quantity_kg));
     setError(null);
   }, [line.quantity_kg]);
 
   function onChange(raw: string) {
     setDraft(raw);
+    onDraftChange(line.product_id, raw);
     const parsed = parseQuantityInput(raw);
     if (!parsed.ok) {
       setError(parsed.error);
@@ -72,6 +86,16 @@ export function CartPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<CheckoutFailure | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  // Lines without a reported draft show their cart quantity, which is always valid.
+  const hasInvalidQuantity = hasInvalidDraft(
+    cart.lines.flatMap((l) => (l.product_id in drafts ? [drafts[l.product_id]] : [])),
+  );
+
+  function onDraftChange(productId: string, draft: string) {
+    setDrafts((current) => (current[productId] === draft ? current : { ...current, [productId]: draft }));
+  }
 
   const checkoutKey = useRef(createCheckoutKey());
   // The state flag disables the button after the next render; the ref also blocks a second
@@ -79,7 +103,7 @@ export function CartPage() {
   const inFlight = useRef(false);
 
   async function placeOrder() {
-    if (inFlight.current || cart.lines.length === 0) return;
+    if (inFlight.current || cart.lines.length === 0 || hasInvalidQuantity) return;
     inFlight.current = true;
     setSubmitting(true);
     setFailure(null);
@@ -178,7 +202,12 @@ export function CartPage() {
               </thead>
               <tbody>
                 {cart.lines.map((line) => (
-                  <CartLineRow key={line.product_id} line={line} disabled={submitting} />
+                  <CartLineRow
+                    key={line.product_id}
+                    line={line}
+                    disabled={submitting}
+                    onDraftChange={onDraftChange}
+                  />
                 ))}
               </tbody>
               <tfoot>
@@ -198,12 +227,17 @@ export function CartPage() {
           </p>
 
           <div className="actions">
-            <Button loading={submitting} onClick={placeOrder}>
+            <Button loading={submitting} disabled={hasInvalidQuantity} onClick={placeOrder}>
               {submitting ? 'Placing order…' : 'Place order'}
             </Button>
             <Button variant="secondary" disabled={submitting} onClick={() => cart.clear()}>
               Clear cart
             </Button>
+            {hasInvalidQuantity && (
+              <p className="field-error" role="status">
+                Fix the highlighted quantities to continue
+              </p>
+            )}
           </div>
         </>
       )}

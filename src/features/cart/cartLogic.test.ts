@@ -5,6 +5,7 @@ import {
   adjustToAvailability,
   cartSignature,
   cartTotal,
+  hasInvalidDraft,
   parseQuantityInput,
   parseStoredCart,
   validateQuantity,
@@ -20,6 +21,27 @@ function line(id: string, quantity_kg: number, cents = 175): CartLine {
     quantity_kg,
   };
 }
+
+describe('hasInvalidDraft', () => {
+  it('is false for valid drafts and for no drafts', () => {
+    expect(hasInvalidDraft(['1', ' 25 ', '5000'])).toBe(false);
+    expect(hasInvalidDraft([])).toBe(false);
+  });
+
+  it('is true for an empty draft', () => {
+    expect(hasInvalidDraft(['10', ''])).toBe(true);
+  });
+
+  it('is true for non-numeric text', () => {
+    expect(hasInvalidDraft(['abc'])).toBe(true);
+    expect(hasInvalidDraft(['10', '1.5'])).toBe(true);
+  });
+
+  it('is true for zero and for values over 5000', () => {
+    expect(hasInvalidDraft(['0'])).toBe(true);
+    expect(hasInvalidDraft(['5001'])).toBe(true);
+  });
+});
 
 describe('quantity validation', () => {
   it('accepts whole kilograms from 1 to 5000', () => {
