@@ -32,13 +32,6 @@ reviews:
   related_issues: false
 
   path_instructions:
-    - path: "**/*"
-      instructions: |
-        - Ignore minor or stylistic concerns.
-        - Restrict feedback to errors, security risks, or functionality-breaking problems.
-        - Do not post comments on code style, formatting, or non-critical improvements.
-        - When in doubt, err on the side of fewer comments: brevity and blocking issues only.
-        - Avoid posting any refactoring suggestions.
     - path: "src/lib/api/**"
       instructions: |
         Types and calls must mirror the gateway public API: snake_case fields, money as {amount_minor, currency}.
