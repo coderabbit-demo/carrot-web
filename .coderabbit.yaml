@@ -31,22 +31,6 @@ reviews:
   assess_linked_issues: false
   related_issues: false
 
-  path_instructions:
-    - path: "src/lib/api/**"
-      instructions: |
-        Types and calls must mirror the gateway public API: snake_case fields, money as {amount_minor, currency}.
-        Flag any place that stores session or bearer tokens in browser storage, sends a state-changing request without the CSRF header, or creates an order without an Idempotency-Key.
-    - path: "src/lib/money.ts"
-      instructions: |
-        Money must stay in integer minor units. Flag floating-point money arithmetic.
-    - path: "src/features/cart/**"
-      instructions: |
-        Server prices and totals are authoritative; client-computed totals are a preview only.
-        Flag checkout paths that can submit twice, regenerate the Idempotency-Key during a retry, or ignore 402, 409 insufficient_stock, 409 idempotency_conflict or 202 payment_pending responses.
-    - path: "src/features/**/*.tsx"
-      instructions: |
-        Flag admin-only actions (cancel order, check payment status) shown to non-admin roles, and any internal or simulation control exposed to customers.
-
   # Review all branches
   auto_review:
     base_branches:
