@@ -109,6 +109,8 @@ export interface RequestOptions {
   responseType?: 'json' | 'blob';
   /** For probes such as the initial /me call, where a 401 just means "signed out". */
   ignoreUnauthorized?: boolean;
+  /** Lets a caller bound how long it waits for this particular request. */
+  signal?: AbortSignal;
 }
 
 export interface ApiResponse<T> {
@@ -147,7 +149,13 @@ async function attempt(method: string, path: string, options: RequestOptions): P
   }
 
   try {
-    return await fetch(`${API_BASE}${path}`, { method, headers, body, credentials: 'include' });
+    return await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body,
+      credentials: 'include',
+      signal: options.signal,
+    });
   } catch {
     throw new ApiError({
       code: 'network_error',
