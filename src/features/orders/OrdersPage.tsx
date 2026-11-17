@@ -5,7 +5,7 @@ import { Money } from '../../components/Money';
 import { Spinner } from '../../components/Spinner';
 import { StatusBadge } from '../../components/StatusBadge';
 import { listOrders } from '../../lib/api/endpoints';
-import { formatDateTime } from '../../lib/format';
+import { formatDateTime, summarizeOrderProducts } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 
 export function OrdersPage() {
@@ -39,6 +39,7 @@ export function OrdersPage() {
                 <tr key={order.id}>
                   <td>
                     <Link to={`/orders/${order.id}`}>{order.number}</Link>
+                    <div className="order-products">{summarizeOrderProducts(order.lines)}</div>
                   </td>
                   <td>{formatDateTime(order.created_at)}</td>
                   <td>

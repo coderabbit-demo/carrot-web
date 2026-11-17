@@ -404,6 +404,11 @@ input:disabled {
   white-space: nowrap;
 }
 
+.order-products {
+  font-size: 0.85em;
+  color: #6b6b63;
+}
+
 .money {
   font-variant-numeric: tabular-nums;
 }
