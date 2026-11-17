@@ -17,6 +17,7 @@ export function Layout() {
             <NavLink to="/cart">Cart{itemCount > 0 ? ` (${itemCount})` : ''}</NavLink>
             <NavLink to="/orders">Orders</NavLink>
             <NavLink to="/invoices">Invoices</NavLink>
+            {organization?.role === 'admin' && <NavLink to="/organization">Organization</NavLink>}
             <NavLink to="/account">Account</NavLink>
           </nav>
           <div className="who">
