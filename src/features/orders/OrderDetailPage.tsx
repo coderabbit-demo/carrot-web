@@ -2,17 +2,21 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
-import { Money } from '../../components/Money';
 import { Spinner } from '../../components/Spinner';
 import { StatusBadge } from '../../components/StatusBadge';
 import { asApiError } from '../../lib/api/client';
 import { cancelOrder, getOrder, reconcileOrder } from '../../lib/api/endpoints';
 import type { ApiError } from '../../lib/api/client';
-import { formatDateTime, formatKg } from '../../lib/format';
+import { formatDateTime } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { useAuth } from '../auth/AuthProvider';
-import { InvoiceDownloadButton } from '../invoices/InvoiceDownloadButton';
+import { OrderActions } from './detail/OrderActions';
+import { OrderLinesTable } from './detail/OrderLinesTable';
+import { OrderStatusBanner } from './detail/OrderStatusBanner';
+import { checkResultNote, pollingNote, statusBanner } from './detail/orderDetailModel';
+import { usePaymentPolling } from './detail/usePaymentPolling';
 import { orderActions } from './orderActions';
+import './detail/orderDetail.css';
 
 export function OrderDetailPage() {
   const { orderId = '' } = useParams();
@@ -20,9 +24,15 @@ export function OrderDetailPage() {
   const role = organization?.role ?? 'buyer';
 
   const order = useAsync(() => getOrder(orderId), [orderId]);
-  const [busy, setBusy] = useState<'cancel' | 'check' | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const [actionError, setActionError] = useState<ApiError | null>(null);
   const [checkNote, setCheckNote] = useState<string | null>(null);
+
+  const polling = usePaymentPolling({
+    orderId,
+    status: order.data?.status ?? null,
+    onOrder: order.setData,
+  });
 
   if (order.error && !order.data) {
     return (
@@ -36,43 +46,42 @@ export function OrderDetailPage() {
   if (!order.data) return <Spinner label="Loading order…" />;
 
   const current = order.data;
-  const actions = orderActions(current.status, role);
+  const capabilities = orderActions(current.status, role);
+  const banner = statusBanner(current.status);
 
   async function onCancel() {
-    setBusy('cancel');
+    setCancelling(true);
     setActionError(null);
     try {
       order.setData(await cancelOrder(current.id));
     } catch (e) {
       setActionError(asApiError(e));
     } finally {
-      setBusy(null);
+      setCancelling(false);
     }
   }
 
   async function onCheckPayment() {
-    setBusy('check');
     setActionError(null);
     setCheckNote(null);
-    try {
-      const next =
-        actions.checkPaymentMode === 'reconcile'
-          ? await reconcileOrder(current.id)
-          : await getOrder(current.id);
-      order.setData(next);
-      if (next.status === 'payment_pending') {
-        setCheckNote('The payment is still being confirmed. Please check again in a moment.');
-      }
-    } catch (e) {
-      setActionError(asApiError(e));
-    } finally {
-      setBusy(null);
-    }
+    const fetcher =
+      capabilities.checkPaymentMode === 'reconcile'
+        ? () => reconcileOrder(current.id)
+        : () => getOrder(current.id);
+    const outcome = await polling.checkNow(fetcher);
+    if (outcome.kind === 'error') setActionError(asApiError(outcome.error));
+    if (outcome.kind === 'ok') setCheckNote(checkResultNote(outcome.value.status));
   }
 
   return (
-    <section>
-      <p>
+    <section className="order-detail">
+      <header className="receipt-header print-only">
+        <p className="receipt-brand">Carrot Cart</p>
+        {organization && <p>{organization.name}</p>}
+        <p>Order receipt</p>
+      </header>
+
+      <p className="no-print">
         <Link to="/orders">&larr; Orders</Link>
       </p>
       <div className="page-head">
@@ -81,88 +90,30 @@ export function OrderDetailPage() {
       </div>
       <p className="muted">Placed {formatDateTime(current.created_at)}</p>
 
-      {current.status === 'payment_pending' && (
-        <div className="banner banner-warning" role="status">
-          <div>
-            <p>We&apos;re confirming your payment. Your order is saved and the stock is held for you.</p>
-            {checkNote && <p className="banner-meta">{checkNote}</p>}
-          </div>
-          {actions.canCheckPayment && (
-            <Button variant="secondary" loading={busy === 'check'} onClick={onCheckPayment}>
+      {banner && (
+        <OrderStatusBanner banner={banner} notes={[checkNote, pollingNote(polling.state)]}>
+          {capabilities.canCheckPayment && (
+            <Button
+              variant="secondary"
+              loading={polling.inFlight}
+              onClick={onCheckPayment}
+            >
               Check payment status
             </Button>
           )}
-        </div>
-      )}
-      {current.status === 'payment_failed' && (
-        <div className="banner banner-error" role="status">
-          Payment was declined for this order. No charge was made.
-        </div>
-      )}
-      {current.status === 'review_required' && (
-        <div className="banner banner-warning" role="status">
-          Your payment was received but we could not complete the order automatically. Our team will
-          review it.
-        </div>
-      )}
-      {current.status === 'cancelled' && (
-        <div className="banner banner-info" role="status">
-          This order was cancelled.
-        </div>
+        </OrderStatusBanner>
       )}
       {actionError && <ErrorBanner error={actionError} />}
 
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th className="num">Quantity</th>
-              <th className="num">Price</th>
-              <th className="num">Line total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {current.lines.map((line) => (
-              <tr key={line.product_id}>
-                <td>
-                  {line.name}
-                  <div className="muted small">{line.sku}</div>
-                </td>
-                <td className="num">{formatKg(line.quantity_kg)}</td>
-                <td className="num">
-                  <Money value={line.unit_price} /> / kg
-                </td>
-                <td className="num">
-                  <Money value={line.line_total} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3}>Total</td>
-              <td className="num">
-                <Money value={current.total} />
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <OrderLinesTable order={current} />
 
-      <div className="actions">
-        {current.invoice_id && (
-          <InvoiceDownloadButton
-            invoiceId={current.invoice_id}
-            invoiceNumber={`INV-${current.number.replace(/\D/g, '')}`}
-          />
-        )}
-        {actions.canCancel && (
-          <Button variant="danger" loading={busy === 'cancel'} onClick={onCancel}>
-            Cancel order
-          </Button>
-        )}
-      </div>
+      <OrderActions
+        order={current}
+        capabilities={capabilities}
+        cancelling={cancelling}
+        onCancel={onCancel}
+        onPrint={() => window.print()}
+      />
     </section>
   );
 }
