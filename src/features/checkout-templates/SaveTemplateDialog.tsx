@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import { uniq } from 'lodash-es';
+import { uniq } from './templateLodash';
 import { Button } from '../../components/Button';
 import type { CartLine } from '../cart/cartLogic';
 import { useCheckoutTemplates } from './useCheckoutTemplates';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Database } from 'sql.js';
-import { isEqual } from 'lodash-es';
+import { isEqual } from './templateLodash';
 import { useAuth } from '../auth/AuthProvider';
 import { initTemplateDb, persistTemplateDb } from './db/templateDb';
 import {

@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver';
-import { pick } from 'lodash-es';
+import { pick } from './templateLodash';
 import type { Database } from 'sql.js';
 import { listTemplates } from './db/templateQueries';
 
