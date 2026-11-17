@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { debounce } from 'lodash-es';
 import { sortBy } from 'lodash-es';
 import { escapeRegExp } from 'lodash-es';
+import { take } from 'lodash-es';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Spinner } from '../../components/Spinner';
@@ -130,7 +131,8 @@ export function TemplatePicker({ onUseTemplate, onClose }: TemplatePickerProps) 
     }
   }
 
-  const tags = allTags(templates);
+  // Cap the filter dropdown so a catalog with hundreds of distinct tags doesn't make it unwieldy.
+  const tags = take(allTags(templates), 20);
 
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
