@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { returnToFromState } from '../../app/returnTo';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorBanner } from '../../components/ErrorBanner';
@@ -10,12 +11,13 @@ import { useAuth } from './AuthProvider';
 
 export function SelectOrganizationPage() {
   const auth = useAuth();
+  const location = useLocation();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
 
   if (auth.status === 'loading') return <Spinner />;
   if (auth.status === 'signed_out') return <Navigate to="/sign-in" replace />;
-  if (auth.status === 'ready') return <Navigate to="/catalog" replace />;
+  if (auth.status === 'ready') return <Navigate to={returnToFromState(location.state)} replace />;
 
   async function choose(organizationId: string) {
     setPending(organizationId);
